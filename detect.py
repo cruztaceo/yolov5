@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import pytesseract
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -150,6 +151,13 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
+                    crop = save_one_box(xyxy, imc, save=False, gain=1, BGR=True)
+                    custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -c load_system_dawg=false'
+                    text = pytesseract.image_to_string(crop, lang='eng', config=custom_oem_psm_config)
+                    result_text = text.split()
+                    if result_text:
+                        text = result_text[-1]
+
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
@@ -158,7 +166,7 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
 
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
-                        label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
+                        label = None if hide_labels else (names[c] if hide_conf else f'{text} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
                         if save_crop:
                             save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
