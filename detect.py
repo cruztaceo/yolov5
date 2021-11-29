@@ -152,11 +152,13 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
-                    crop = save_one_box(xyxy, imc, gain=.86, pad=0, BGR=True, file=save_dir / 'crops' / names[0] / f'{p.stem}-OCR.jpg')
+                    crop = save_one_box(xyxy, imc, gain=.86, pad=0, BGR=True, save=False)
                     image = preprocess(crop)
+                    cv2.imwrite(str(increment_path(save_dir / 'crops' / names[0] / f'{p.stem}-OCR.jpg').with_suffix('.jpg')), image)
                     # cv2.imshow('image', image)
                     # cv2.waitKey()
-                    custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -c load_system_dawg=false -c load_freq_dawg=false'
+                    # custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -c load_system_dawg=false -c load_freq_dawg=false'
+                    custom_oem_psm_config = r'--oem 1 --psm 6 -c load_system_dawg=false -c load_freq_dawg=false'
                     text = pytesseract.image_to_string(image, lang='cal', config=custom_oem_psm_config)
                     result_text = text.split()
                     if result_text:
@@ -218,13 +220,13 @@ def getSkewAngle(cvImage) -> float:
     # Prep image, copy, convert to gray scale, blur, and threshold
     newImage = cvImage.copy()
     gray = cv2.cvtColor(newImage, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (13, 13), 0)
+    blur = cv2.GaussianBlur(gray, (9, 9), 0)
     thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
     # Apply dilate to merge text into meaningful lines/paragraphs.
     # Use larger kernel on X axis to merge characters into single line, cancelling out any spaces.
     # But use smaller kernel on Y axis to separate between different blocks of text
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 1))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 1))
     dilate = cv2.dilate(thresh, kernel)
 
     # Find all contours
@@ -272,12 +274,13 @@ def preprocess(cvImage):
     height = int(cvImage.shape[0] * scale_percent / 100)
     dim = (width, height)
     cvImage = cv2.resize(cvImage, dim, interpolation=cv2.INTER_CUBIC)
-    # angle = getSkewAngle(cvImage)
-    # cvImage = rotateImage(cvImage, angle)
-    # gray = cv2.cvtColor(cvImage, cv2.COLOR_BGR2GRAY)
+    angle = getSkewAngle(cvImage)
+    cvImage = rotateImage(cvImage, angle)
+    gray = cv2.cvtColor(cvImage, cv2.COLOR_BGR2GRAY)
+    threshold_img = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
     # blur = cv2.GaussianBlur(gray, (5, 5), 0)
     # thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-    return cvImage
+    return threshold_img
 
 
 def parse_opt():

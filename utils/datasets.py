@@ -303,7 +303,7 @@ class LoadStreams:
             if 'youtube.com/' in s or 'youtu.be/' in s:  # if source is YouTube video
                 check_requirements(('pafy', 'youtube_dl'))
                 import pafy
-                s = pafy.new(s).getbest(preftype="mp4").url  # YouTube URL
+                s = pafy.new(s).getbestvideo(preftype="mp4").url  # YouTube URL
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
             cap = cv2.VideoCapture(s)
             assert cap.isOpened(), f'{st}Failed to open {s}'
