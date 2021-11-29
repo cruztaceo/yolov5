@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import numpy as np
 import pytesseract
 import torch
 import torch.backends.cudnn as cudnn
@@ -151,12 +152,15 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
-                    crop = save_one_box(xyxy, imc, save=False, gain=1, BGR=True)
-                    custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -c load_system_dawg=false'
-                    text = pytesseract.image_to_string(crop, lang='eng', config=custom_oem_psm_config)
-                    result_text = text.split()
-                    if result_text:
-                        text = result_text[-1]
+                    crop = save_one_box(xyxy, imc, gain=.86, pad=0, BGR=True, file=save_dir / 'crops' / names[0] / f'{p.stem}-OCR.jpg')
+                    image = preprocess(crop)
+                    # cv2.imshow('image', image)
+                    # cv2.waitKey()
+                    custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -c load_system_dawg=false -c load_freq_dawg=false'
+                    text = pytesseract.image_to_string(image, lang='cal', config=custom_oem_psm_config)
+                    # result_text = text.split()
+                    # if result_text:
+                    #     text = result_text[-1]
 
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -214,13 +218,13 @@ def getSkewAngle(cvImage) -> float:
     # Prep image, copy, convert to gray scale, blur, and threshold
     newImage = cvImage.copy()
     gray = cv2.cvtColor(newImage, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (9, 9), 0)
+    blur = cv2.GaussianBlur(gray, (13, 13), 0)
     thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
     # Apply dilate to merge text into meaningful lines/paragraphs.
     # Use larger kernel on X axis to merge characters into single line, cancelling out any spaces.
     # But use smaller kernel on Y axis to separate between different blocks of text
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 1))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 1))
     dilate = cv2.dilate(thresh, kernel)
 
     # Find all contours
@@ -231,19 +235,18 @@ def getSkewAngle(cvImage) -> float:
     largestContour = contours[0]
     minAreaRect = cv2.minAreaRect(largestContour)
 
-    # cv2.drawContours(gray, contours, 0, (0, 255, 0), 3)
+    # cv2.drawContours(cvImage, contours, 0, (0, 255, 0), 3)
     #
     # box = cv2.boxPoints(minAreaRect)
     # box = np.int0(box)
     # cv2.drawContours(cvImage, [box], 0, (0, 0, 255), 2)
-    #
+
     # cv2.imshow('gray', gray)
     # cv2.imshow('blur', blur)
     # cv2.imshow('thresh', thresh)
     # cv2.imshow('dilate', dilate)
     # cv2.imshow('cvImage', cvImage)
     # cv2.waitKey()
-
 
     # Determine the angle. Convert it to the value that was originally used to obtain skewed image
     angle = minAreaRect[-1]
@@ -263,9 +266,18 @@ def rotateImage(cvImage, angle: float):
 
 
 # Deskew image
-def deskew(cvImage):
-    angle = getSkewAngle(cvImage)
-    return rotateImage(cvImage, angle)
+def preprocess(cvImage):
+    scale_percent = 400  # percent of original size
+    width = int(cvImage.shape[1] * scale_percent / 100)
+    height = int(cvImage.shape[0] * scale_percent / 100)
+    dim = (width, height)
+    cvImage = cv2.resize(cvImage, dim, interpolation=cv2.INTER_CUBIC)
+    # angle = getSkewAngle(cvImage)
+    # cvImage = rotateImage(cvImage, angle)
+    # gray = cv2.cvtColor(cvImage, cv2.COLOR_BGR2GRAY)
+    # blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    # thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    return cvImage
 
 
 def parse_opt():
