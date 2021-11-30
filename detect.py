@@ -252,8 +252,10 @@ def getSkewAngle(cvImage) -> float:
 
     # Determine the angle. Convert it to the value that was originally used to obtain skewed image
     angle = minAreaRect[-1]
-    if angle > 45:
-        angle -= 90
+    print(f'Preprocess angle: {angle}')
+    if angle < -45:
+        angle += 90
+    print(f'Process angle: {angle}')
     return angle
 
 
