@@ -301,7 +301,7 @@ class LoadStreams:
             # Start thread to read frames from video stream
             st = f'{i + 1}/{n}: {s}... '
             if 'youtube.com/' in s or 'youtu.be/' in s:  # if source is YouTube video
-                check_requirements(('pytube'))
+                check_requirements(('pytube', 'pafy'))
                 from pytube import YouTube
                 s = YouTube(s).streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first().download()
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
