@@ -157,7 +157,7 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
                     # cv2.imwrite(str(increment_path(save_dir / 'crops' / names[0] / f'{p.stem}-OCR.jpg').with_suffix('.jpg')), image)
                     # cv2.imshow('image', image)
                     # cv2.waitKey()
-                    custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789qwer -c load_system_dawg=false -c load_freq_dawg=false'
+                    custom_oem_psm_config = r'--oem 1 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -c load_system_dawg=false -c load_freq_dawg=false'
                     # custom_oem_psm_config = r'--oem 1 --psm 6 -c load_system_dawg=false -c load_freq_dawg=false'
                     text = pytesseract.image_to_string(image, lang='cal', config=custom_oem_psm_config)
                     result_text = text.split()
